@@ -1,78 +1,218 @@
 # Courier Tracking Service
 
-This service tracks couriers' locations, detects when they enter store proximity, and calculates their total travel distances.
+A real-time courier tracking system that monitors courier locations, detects store proximity, and calculates travel distances. The system is built using a hybrid architecture combining CQRS (Command Query Responsibility Segregation) and Hexagonal Architecture patterns.
 
-## Prerequisites
+## Table of Contents
+- [System Overview](#system-overview)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Event Flow](#event-flow)
+- [Getting Started](#getting-started)
+- [API Documentation](#api-documentation)
+- [Testing](#testing)
+- [Monitoring](#monitoring)
+- [Development](#development)
 
+## System Overview
+
+The Courier Tracking Service provides the following core functionalities:
+- Real-time courier location tracking
+- Automatic store proximity detection (100m radius)
+- Store entry logging with cooldown period (1 minute)
+- Total travel distance calculation using Haversine formula
+- Event-driven architecture using Kafka
+- RESTful API endpoints
+
+### Key Features
+- Asynchronous event processing
+- Geofencing capabilities
+- Transaction-safe event publishing
+- Retry mechanisms for failed operations
+- Comprehensive logging and monitoring
+- UTC timestamp handling
+
+## Architecture
+
+The application follows a hybrid architecture combining CQRS and Hexagonal Architecture patterns:
+
+### Domain Layer (Core)
+- Business logic and domain models
+- Location and distance calculations
+- Event definitions
+- Repository interfaces
+
+### Application Layer
+- Command services for write operations
+- Query services for read operations
+- Event handlers and processors
+
+### Infrastructure Layer
+- REST controllers
+- Kafka producers and consumers
+- Database repositories
+- Configuration classes
+
+### Event Flow Diagram
+```mermaid
+sequenceDiagram
+    participant Client
+    participant REST API
+    participant LocationCommandService
+    participant PostgreSQL
+    participant Kafka
+    participant StoreEntryCommandService
+
+    Client->>REST API: POST /couriers/{id}/locations
+    Note over Client,REST API: Payload: latitude, longitude
+
+    REST API->>LocationCommandService: Process Location Update
+    
+    rect rgb(200, 220, 255)
+        Note over LocationCommandService: Step 1: Update Courier
+        LocationCommandService->>PostgreSQL: Find Courier by ID
+        PostgreSQL-->>LocationCommandService: Return Courier (or create new)
+        LocationCommandService->>LocationCommandService: Calculate Travel Distance
+        LocationCommandService->>PostgreSQL: Save Updated Courier
+    end
+
+    rect rgb(255, 220, 200)
+        Note over LocationCommandService: Step 2: Publish Event
+        LocationCommandService->>Kafka: Publish CourierLocationEvent
+        Note over Kafka: Topic: courier.location
+    end
+
+    rect rgb(220, 255, 200)
+        Note over StoreEntryCommandService: Step 3: Process Store Proximity
+        Kafka->>StoreEntryCommandService: Consume CourierLocationEvent
+        StoreEntryCommandService->>PostgreSQL: Get Nearby Stores
+        PostgreSQL-->>StoreEntryCommandService: Return Store List
+        StoreEntryCommandService->>StoreEntryCommandService: Check Store Proximity
+        Note over StoreEntryCommandService: Using Haversine Formula
+        
+        opt Within 100m of Store
+            StoreEntryCommandService->>PostgreSQL: Check Recent Entries (1min cooldown)
+            alt No Recent Entry
+                StoreEntryCommandService->>PostgreSQL: Save Store Entry
+                StoreEntryCommandService->>Kafka: Publish StoreEntryEvent
+                Note over Kafka: Topic: store.entry
+            end
+        end
+    end
+
+    REST API-->>Client: Return 202 Accepted
+```
+
+## Tech Stack
+
+### Core Technologies
 - Java 21
-- Docker and Docker Compose
-- Gradle
+- Spring Boot 3.2.1
+- Spring Framework
+- Apache Kafka
+- PostgreSQL
+- Docker & Docker Compose
+
+### Libraries and Tools
+- Spring Data JPA
+- Spring Kafka
+- Lombok
+- Flyway (Database Migrations)
+- SpringDoc OpenAPI (Swagger)
+- SLF4J with Logback
+
+### Development Tools
+- Gradle (Build Tool)
+- JUnit 5 (Testing)
+- Testcontainers (Integration Testing)
+- pgAdmin (Database Management)
 
 ## Getting Started
 
-1. Start the required services (PostgreSQL, pgAdmin, and Kafka):
+### Prerequisites
+- Docker and Docker Compose
+- Java 21 JDK
+- Gradle 8.x
+
+### One-Click Setup
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/courier-tracking-service.git
+cd courier-tracking-service
+```
+
+2. Start all services:
 ```bash
 docker-compose up -d
 ```
 
-2. Build the project:
-```bash
-./gradlew clean build
-```
-
-3. Run the application:
+3. Build and run the application:
 ```bash
 ./gradlew bootRun
 ```
 
-The application will be available at `http://localhost:8080`
+The application will be available at:
+- API: http://localhost:8080
+- Swagger UI: http://localhost:8080/swagger-ui.html
+- pgAdmin: http://localhost:5050
 
-## Database Visualization with pgAdmin
+### Database Setup
+pgAdmin credentials:
+- Email: admin@admin.com
+- Password: admin
 
-1. Access pgAdmin at `http://localhost:5050`
-   - Email: admin@admin.com
-   - Password: admin
-
-2. Add a new server in pgAdmin:
-   - Right click on 'Servers' → 'Register' → 'Server'
-   - General tab:
-     - Name: CourierTracking
-   - Connection tab:
-     - Host: postgres
-     - Port: 5432
-     - Database: courier_tracking
-     - Username: postgres
-     - Password: postgres
-
-3. View tables:
-   - Expand: Servers → CourierTracking → Databases → courier_tracking → Schemas → public → Tables
-   - Right-click on any table and select "View/Edit Data" → "All Rows"
+To configure the database connection in pgAdmin:
+1. Add new server:
+   - Name: CourierTracking
+   - Host: postgres
+   - Port: 5432
+   - Database: courier_tracking
+   - Username: postgres
+   - Password: postgres
 
 ## API Documentation
 
-Once the application is running, you can access the OpenAPI documentation at:
-`http://localhost:8080/swagger-ui.html`
+### REST Endpoints
 
-## Testing the Application
+#### Courier Location Update
+```http
+POST /api/v1/couriers/{id}/locations
+```
+Parameters:
+- `id`: Courier ID (path parameter)
+- `latitude`: Courier's latitude (query parameter)
+- `longitude`: Courier's longitude (query parameter)
 
-1. Report a courier location:
+Example:
 ```bash
 curl -X POST "http://localhost:8080/api/v1/couriers/1/locations?latitude=40.9923307&longitude=29.1244229"
 ```
 
-2. Get courier details:
+#### Get Courier Details
+```http
+GET /api/v1/couriers/{id}
+```
+Example:
 ```bash
 curl -X GET "http://localhost:8080/api/v1/couriers/1"
 ```
 
-3. Get courier's total travel distance:
+#### Get Total Travel Distance
+```http
+GET /api/v1/couriers/{id}/total-travel-distance
+```
+Example:
 ```bash
 curl -X GET "http://localhost:8080/api/v1/couriers/1/total-travel-distance"
 ```
 
-## Example Test Scenario
+### Kafka Topics
+- `courier.location`: Courier location updates
+- `store.entry`: Store entry events
 
-1. Report courier approaching Ataşehir MMM Migros:
+## Testing
+
+### Integration Test Scenario
+Test a courier approaching Ataşehir MMM Migros:
 ```bash
 # Location 1 - 150m away from store
 curl -X POST "http://localhost:8080/api/v1/couriers/1/locations?latitude=40.9923307&longitude=29.1234229"
@@ -84,52 +224,70 @@ curl -X POST "http://localhost:8080/api/v1/couriers/1/locations?latitude=40.9923
 curl -X POST "http://localhost:8080/api/v1/couriers/1/locations?latitude=40.9923307&longitude=29.1254229"
 ```
 
-2. Check total travel distance:
+### Monitoring
+1. View Kafka messages:
 ```bash
-curl -X GET "http://localhost:8080/api/v1/couriers/1/total-travel-distance"
+docker-compose logs -f kafka
 ```
 
-## Stopping the Application
-
-1. Stop the Spring Boot application by pressing `Ctrl+C` in the terminal where it's running
-
-2. Stop and remove Docker containers:
+2. Check application logs:
 ```bash
-# Stop containers
+docker-compose logs -f courier-tracking-service
+```
+
+3. Query store entries:
+```sql
+SELECT * FROM store_entry ORDER BY entry_time DESC;
+```
+
+## Development
+
+### Project Structure
+```
+src/main/java/com/melihcelik/couriertracking/
+├── application/
+│   ├── command/
+│   └── query/
+├── domain/
+│   ├── event/
+│   ├── model/
+│   ├── repository/
+│   └── util/
+└── infrastructure/
+    ├── config/
+    ├── messaging/
+    └── rest/
+```
+
+### Key Components
+- `CourierLocationCommandService`: Processes location updates
+- `StoreEntryCommandService`: Handles store entry events
+- `GeoUtils`: Haversine formula calculations
+- `KafkaConfig`: Kafka configuration and retry policies
+
+### Error Handling
+- Kafka retry mechanism (3 attempts with 1-second delay)
+- Transaction-safe event publishing
+- Comprehensive error logging
+- Cooldown period for store entries
+
+### Shutdown
+```bash
+# Stop the application (Ctrl+C)
+
+# Stop and remove containers
 docker-compose down
 
-# Remove volumes (optional, will delete all data)
+# Remove volumes (optional)
 docker-compose down -v
 ```
 
-## Features
+## Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
 
-- Real-time courier location tracking
-- Automatic store proximity detection (100m radius)
-- Store entry logging with 1-minute cooldown
-- Total travel distance calculation using Haversine formula
-- Event-driven architecture using Kafka
-- RESTful API with OpenAPI documentation
-- Database visualization with pgAdmin
-
-## Architecture
-
-The application follows a hybrid architecture combining CQRS and Hexagonal Architecture:
-
-- **Domain Layer**: Contains business logic and entities
-- **Application Layer**: Handles commands and queries
-- **Infrastructure Layer**: Manages external interactions (Kafka, REST, Database)
-
-## Database Schema
-
-- `courier`: Stores courier information and current location
-- `store`: Contains store locations
-- `store_entry`: Logs courier entries into store proximity
-
-## Event Flow
-
-1. Courier location update received via REST API
-2. Location event published to Kafka
-3. Location processed and store proximity checked
-4. If within store radius, store entry event published
-5. Store entry processed and logged if cooldown period passed 
+## License
+This project is licensed under the MIT License - see the LICENSE file for details. 
