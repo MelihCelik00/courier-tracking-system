@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: courier-tracking-service
+  
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://localhost:5432/courier_tracking
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: courier-tracking-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.melihcelik.couriertracking.domain.event"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+# Server Configuration
+server:
+  port: 8080
+
+# Logging Configuration
+logging:
+  level:
+    com.melihcelik.couriertracking: DEBUG
+    org.springframework: INFO
+
+# Application Specific Configuration
+courier-tracking:
+  store-proximity-radius: 100 # in meters
+  store-entry-cooldown: 60 # in seconds
