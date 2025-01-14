@@ -8,13 +8,17 @@ import com.melihcelik.couriertracking.domain.repository.CourierRepository;
 import com.melihcelik.couriertracking.domain.repository.StoreRepository;
 import com.melihcelik.couriertracking.domain.util.GeoUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionSynchronization;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CourierLocationCommandService {
@@ -28,24 +32,41 @@ public class CourierLocationCommandService {
 
     @Transactional
     public void processCourierLocation(CourierLocationEvent event) {
+        log.debug("Processing courier location event: {}", event);
+        
+        // First, ensure courier exists
         Courier courier = courierRepository.findById(event.getCourierId())
                 .orElseGet(() -> createNewCourier(event));
-
-        updateCourierLocation(courier, event);
-        checkStoreProximity(courier);
         
-        // Publish the location event for distance calculation
-        locationKafkaTemplate.send("courier.location", event);
+        // Save/update courier first
+        updateCourierLocation(courier, event);
+        courier = courierRepository.save(courier);  // Get the managed entity with ID
+
+        // Store the final courier ID for use in the transaction callback
+        final Long courierId = courier.getId();
+        final CourierLocationEvent finalEvent = event;
+
+        // Register a callback to be executed after transaction commit
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                // Fetch the courier again to ensure we have the committed data
+                courierRepository.findById(courierId).ifPresent(committedCourier -> 
+                    checkStoreProximity(committedCourier, finalEvent));
+            }
+        });
     }
 
     private Courier createNewCourier(CourierLocationEvent event) {
-        return Courier.builder()
+        log.info("Creating new courier with ID: {}", event.getCourierId());
+        Courier courier = Courier.builder()
                 .id(event.getCourierId())
                 .totalTravelDistance(0.0)
                 .lastLatitude(event.getLatitude())
                 .lastLongitude(event.getLongitude())
                 .isActive(true)
                 .build();
+        return courierRepository.save(courier);  // Save immediately to get ID
     }
 
     private void updateCourierLocation(Courier courier, CourierLocationEvent event) {
@@ -55,31 +76,45 @@ public class CourierLocationCommandService {
                     event.getLatitude(), event.getLongitude()
             );
             courier.setTotalTravelDistance(courier.getTotalTravelDistance() + distance);
+            log.debug("Updated courier total distance - courier: {}, distance: {}", courier.getId(), distance);
         }
         
         courier.setLastLatitude(event.getLatitude());
         courier.setLastLongitude(event.getLongitude());
-        courierRepository.save(courier);
     }
 
-    private void checkStoreProximity(Courier courier) {
+    private void checkStoreProximity(Courier courier, CourierLocationEvent event) {
         List<Store> stores = storeRepository.findAll();
         
         for (Store store : stores) {
-            if (GeoUtils.isWithinRadius(
+            boolean isWithinRadius = GeoUtils.isWithinRadius(
                     courier.getLastLatitude(), courier.getLastLongitude(),
                     store.getLatitude(), store.getLongitude(),
                     storeProximityRadius
-            )) {
+            );
+
+            if (isWithinRadius) {
+                log.debug("Courier within store radius - courier: {}, store: {}", courier.getId(), store.getId());
+                
                 StoreEntryEvent entryEvent = StoreEntryEvent.builder()
                         .courierId(courier.getId())
                         .storeId(store.getId())
                         .storeName(store.getName())
                         .latitude(courier.getLastLatitude())
                         .longitude(courier.getLastLongitude())
+                        .timestamp(event.getTimestamp())
                         .build();
                 
-                storeEntryKafkaTemplate.send("store.entry", entryEvent);
+                storeEntryKafkaTemplate.send("store.entry", entryEvent)
+                    .whenComplete((result, ex) -> {
+                        if (ex == null) {
+                            log.debug("Successfully published store entry event - courier: {}, store: {}", 
+                                courier.getId(), store.getId());
+                        } else {
+                            log.error("Failed to publish store entry event - courier: {}, store: {}, error: {}", 
+                                courier.getId(), store.getId(), ex.toString());
+                        }
+                    });
             }
         }
     }

@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -20,5 +20,5 @@ public interface StoreEntryRepository extends JpaRepository<StoreEntry, Long> {
     Optional<StoreEntry> findLatestEntryForCourierAndStore(
             @Param("courierId") Long courierId,
             @Param("storeId") Long storeId,
-            @Param("since") LocalDateTime since);
+            @Param("since") Instant since);
 } 

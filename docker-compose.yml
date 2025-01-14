@@ -7,10 +7,27 @@ services:
       POSTGRES_DB: courier_tracking
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      TZ: UTC
+      PGTZ: UTC
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    command: postgres -c timezone=UTC
+    networks:
+      - courier-network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+    networks:
+      - courier-network
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.1
@@ -19,6 +36,8 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
+    networks:
+      - courier-network
 
   kafka:
     image: confluentinc/cp-kafka:7.5.1
@@ -33,6 +52,12 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - courier-network
+
+networks:
+  courier-network:
+    driver: bridge
 
 volumes:
-  postgres_data: 
+  postgres_data:  

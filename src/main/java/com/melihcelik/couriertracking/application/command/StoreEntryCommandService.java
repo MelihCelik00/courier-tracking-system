@@ -8,12 +8,15 @@ import com.melihcelik.couriertracking.domain.repository.CourierRepository;
 import com.melihcelik.couriertracking.domain.repository.StoreEntryRepository;
 import com.melihcelik.couriertracking.domain.repository.StoreRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Duration;
+import java.time.Instant;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class StoreEntryCommandService {
@@ -26,19 +29,39 @@ public class StoreEntryCommandService {
 
     @Transactional
     public void processStoreEntry(StoreEntryEvent event) {
-        Courier courier = courierRepository.findById(event.getCourierId())
-                .orElseThrow(() -> new IllegalStateException("Courier not found"));
-        
-        Store store = storeRepository.findById(event.getStoreId())
-                .orElseThrow(() -> new IllegalStateException("Store not found"));
+        try {
+            log.debug("Processing store entry event: {}", event);
+            
+            // Validate courier exists
+            Courier courier = courierRepository.findById(event.getCourierId())
+                    .orElseThrow(() -> {
+                        log.error("Courier not found for store entry event - courierId: {}", event.getCourierId());
+                        return new IllegalStateException("Courier not found with ID: " + event.getCourierId());
+                    });
+            
+            // Validate store exists
+            Store store = storeRepository.findById(event.getStoreId())
+                    .orElseThrow(() -> {
+                        log.error("Store not found for store entry event - storeId: {}", event.getStoreId());
+                        return new IllegalStateException("Store not found with ID: " + event.getStoreId());
+                    });
 
-        // Check if courier has entered this store recently
-        LocalDateTime cooldownTime = event.getTimestamp().minusSeconds(storeEntryCooldown);
-        boolean recentEntry = storeEntryRepository
-                .findLatestEntryForCourierAndStore(courier.getId(), store.getId(), cooldownTime)
-                .isPresent();
+            // Check cooldown period
+            Instant cooldownTime = event.getTimestamp().minus(Duration.ofSeconds(storeEntryCooldown));
+            boolean recentEntry = storeEntryRepository
+                    .findLatestEntryForCourierAndStore(courier.getId(), store.getId(), cooldownTime)
+                    .isPresent();
 
-        if (!recentEntry) {
+            if (recentEntry) {
+                log.debug("Skipping store entry due to cooldown - courier: {}, store: {}, cooldownTime: {}", 
+                        courier.getId(), store.getId(), cooldownTime);
+                return;
+            }
+
+            // Create and save store entry
+            log.info("Creating new store entry - courier: {}, store: {}, timestamp: {}", 
+                    courier.getId(), store.getId(), event.getTimestamp());
+
             StoreEntry entry = StoreEntry.builder()
                     .courier(courier)
                     .store(store)
@@ -48,6 +71,12 @@ public class StoreEntryCommandService {
                     .build();
 
             storeEntryRepository.save(entry);
+            log.debug("Successfully saved store entry - id: {}, courier: {}, store: {}", 
+                    entry.getId(), courier.getId(), store.getId());
+            
+        } catch (Exception e) {
+            log.error("Error processing store entry event: {}", event, e);
+            throw e; // Re-throw to trigger Kafka retry mechanism
         }
     }
-} 
+}

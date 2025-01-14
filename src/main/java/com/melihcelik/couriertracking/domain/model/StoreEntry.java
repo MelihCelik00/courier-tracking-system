@@ -7,7 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Data
@@ -30,11 +30,11 @@ public class StoreEntry {
     private Store store;
 
     @NotNull
-    private LocalDateTime entryTime;
+    private Instant entryTime;
 
     @NotNull
     private Double entryLatitude;
 
     @NotNull
     private Double entryLongitude;
-} 
+}

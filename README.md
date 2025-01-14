@@ -10,7 +10,7 @@ This service tracks couriers' locations, detects when they enter store proximity
 
 ## Getting Started
 
-1. Start the required services (PostgreSQL and Kafka):
+1. Start the required services (PostgreSQL, pgAdmin, and Kafka):
 ```bash
 docker-compose up -d
 ```
@@ -26,6 +26,27 @@ docker-compose up -d
 ```
 
 The application will be available at `http://localhost:8080`
+
+## Database Visualization with pgAdmin
+
+1. Access pgAdmin at `http://localhost:5050`
+   - Email: admin@admin.com
+   - Password: admin
+
+2. Add a new server in pgAdmin:
+   - Right click on 'Servers' → 'Register' → 'Server'
+   - General tab:
+     - Name: CourierTracking
+   - Connection tab:
+     - Host: postgres
+     - Port: 5432
+     - Database: courier_tracking
+     - Username: postgres
+     - Password: postgres
+
+3. View tables:
+   - Expand: Servers → CourierTracking → Databases → courier_tracking → Schemas → public → Tables
+   - Right-click on any table and select "View/Edit Data" → "All Rows"
 
 ## API Documentation
 
@@ -68,6 +89,19 @@ curl -X POST "http://localhost:8080/api/v1/couriers/1/locations?latitude=40.9923
 curl -X GET "http://localhost:8080/api/v1/couriers/1/total-travel-distance"
 ```
 
+## Stopping the Application
+
+1. Stop the Spring Boot application by pressing `Ctrl+C` in the terminal where it's running
+
+2. Stop and remove Docker containers:
+```bash
+# Stop containers
+docker-compose down
+
+# Remove volumes (optional, will delete all data)
+docker-compose down -v
+```
+
 ## Features
 
 - Real-time courier location tracking
@@ -76,6 +110,7 @@ curl -X GET "http://localhost:8080/api/v1/couriers/1/total-travel-distance"
 - Total travel distance calculation using Haversine formula
 - Event-driven architecture using Kafka
 - RESTful API with OpenAPI documentation
+- Database visualization with pgAdmin
 
 ## Architecture
 

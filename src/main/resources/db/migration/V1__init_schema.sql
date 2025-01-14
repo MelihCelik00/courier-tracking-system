@@ -17,7 +17,7 @@ CREATE TABLE store_entry (
     id BIGSERIAL PRIMARY KEY,
     courier_id BIGINT NOT NULL REFERENCES courier(id),
     store_id BIGINT NOT NULL REFERENCES store(id),
-    entry_time TIMESTAMP NOT NULL,
+    entry_time TIMESTAMP WITH TIME ZONE NOT NULL,
     entry_latitude DOUBLE PRECISION NOT NULL,
     entry_longitude DOUBLE PRECISION NOT NULL,
     CONSTRAINT fk_courier FOREIGN KEY (courier_id) REFERENCES courier(id),

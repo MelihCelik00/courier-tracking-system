@@ -13,7 +13,11 @@ import org.springframework.stereotype.Component;
 public class StoreEntryConsumer {
     private final StoreEntryCommandService commandService;
 
-    @KafkaListener(topics = "store.entry", groupId = "courier-tracking-group")
+    @KafkaListener(
+        topics = "store.entry",
+        groupId = "courier-tracking-group",
+        containerFactory = "storeEntryKafkaListenerContainerFactory"
+    )
     public void consume(StoreEntryEvent event) {
         log.debug("Received store entry event: {}", event);
         commandService.processStoreEntry(event);

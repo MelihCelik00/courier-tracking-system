@@ -13,7 +13,11 @@ import org.springframework.stereotype.Component;
 public class CourierLocationConsumer {
     private final CourierLocationCommandService commandService;
 
-    @KafkaListener(topics = "courier.location", groupId = "courier-tracking-group")
+    @KafkaListener(
+        topics = "courier.location",
+        groupId = "courier-tracking-group",
+        containerFactory = "courierLocationKafkaListenerContainerFactory"
+    )
     public void consume(CourierLocationEvent event) {
         log.debug("Received courier location event: {}", event);
         commandService.processCourierLocation(event);
