@@ -67,7 +67,7 @@ sequenceDiagram
 
     REST API->>LocationCommandService: Process Location Update
     
-    rect rgb(200, 220, 255)
+    rect rgb(100, 120, 120)
         Note over LocationCommandService: Step 1: Update Courier
         LocationCommandService->>PostgreSQL: Find Courier by ID
         PostgreSQL-->>LocationCommandService: Return Courier (or create new)
@@ -75,13 +75,13 @@ sequenceDiagram
         LocationCommandService->>PostgreSQL: Save Updated Courier
     end
 
-    rect rgb(255, 220, 200)
+    rect rgb(155, 120, 80)
         Note over LocationCommandService: Step 2: Publish Event
         LocationCommandService->>Kafka: Publish CourierLocationEvent
         Note over Kafka: Topic: courier.location
     end
 
-    rect rgb(220, 255, 200)
+    rect rgb(120, 155, 50)
         Note over StoreEntryCommandService: Step 3: Process Store Proximity
         Kafka->>StoreEntryCommandService: Consume CourierLocationEvent
         StoreEntryCommandService->>PostgreSQL: Get Nearby Stores
