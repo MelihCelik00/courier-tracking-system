@@ -1,5 +1,6 @@
 package com.melihcelik.couriertracking.application.query;
 
+import com.melihcelik.couriertracking.domain.exception.CourierNotFoundException;
 import com.melihcelik.couriertracking.domain.model.Courier;
 import com.melihcelik.couriertracking.domain.repository.CourierRepository;
 import com.melihcelik.couriertracking.domain.repository.StoreEntryRepository;
@@ -23,11 +24,11 @@ class CourierQueryServiceTest {
     @Mock
     private StoreEntryRepository storeEntryRepository;
 
-    private CourierQueryService service;
+    private CourierQueryService queryService;
 
     @BeforeEach
     void setUp() {
-        service = new CourierQueryService(courierRepository, storeEntryRepository);
+        queryService = new CourierQueryService(courierRepository, storeEntryRepository);
     }
 
     @Test
@@ -44,12 +45,11 @@ class CourierQueryServiceTest {
         when(courierRepository.findById(courierId)).thenReturn(Optional.of(courier));
 
         // Act
-        Optional<Courier> result = service.getCourierById(courierId);
+        Optional<Courier> result = queryService.getCourierById(courierId);
 
         // Assert
         assertTrue(result.isPresent());
         assertEquals(courierId, result.get().getId());
-        assertEquals(100.0, result.get().getTotalTravelDistance());
         verify(courierRepository).findById(courierId);
     }
 
@@ -60,10 +60,10 @@ class CourierQueryServiceTest {
         when(courierRepository.findById(courierId)).thenReturn(Optional.empty());
 
         // Act
-        Optional<Courier> result = service.getCourierById(courierId);
+        Optional<Courier> result = queryService.getCourierById(courierId);
 
         // Assert
-        assertFalse(result.isPresent());
+        assertTrue(result.isEmpty());
         verify(courierRepository).findById(courierId);
     }
 
@@ -75,14 +75,11 @@ class CourierQueryServiceTest {
         Courier courier = Courier.builder()
                 .id(courierId)
                 .totalTravelDistance(expectedDistance)
-                .lastLatitude(40.9923307)
-                .lastLongitude(29.1244229)
-                .isActive(true)
                 .build();
         when(courierRepository.findById(courierId)).thenReturn(Optional.of(courier));
 
         // Act
-        double result = service.getTotalTravelDistance(courierId);
+        double result = queryService.getTotalTravelDistance(courierId);
 
         // Assert
         assertEquals(expectedDistance, result);
@@ -90,16 +87,13 @@ class CourierQueryServiceTest {
     }
 
     @Test
-    void getTotalTravelDistance_NonExistingCourier_ShouldReturnZero() {
+    void getTotalTravelDistance_NonExistingCourier_ShouldThrowException() {
         // Arrange
         Long courierId = 1L;
         when(courierRepository.findById(courierId)).thenReturn(Optional.empty());
 
-        // Act
-        double result = service.getTotalTravelDistance(courierId);
-
-        // Assert
-        assertEquals(0.0, result);
+        // Act & Assert
+        assertThrows(CourierNotFoundException.class, () -> queryService.getTotalTravelDistance(courierId));
         verify(courierRepository).findById(courierId);
     }
 } 

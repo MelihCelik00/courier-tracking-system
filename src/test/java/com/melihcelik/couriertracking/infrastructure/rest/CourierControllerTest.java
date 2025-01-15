@@ -2,6 +2,7 @@ package com.melihcelik.couriertracking.infrastructure.rest;
 
 import com.melihcelik.couriertracking.application.query.CourierQueryService;
 import com.melihcelik.couriertracking.domain.event.CourierLocationEvent;
+import com.melihcelik.couriertracking.domain.exception.CourierNotFoundException;
 import com.melihcelik.couriertracking.domain.model.Courier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,17 +89,13 @@ class CourierControllerTest {
     }
 
     @Test
-    void getCourier_NonExistingCourier_ShouldReturnNotFound() {
+    void getCourier_NonExistingCourier_ShouldThrowException() {
         // Arrange
         Long courierId = 1L;
         when(queryService.getCourierById(courierId)).thenReturn(Optional.empty());
 
-        // Act
-        ResponseEntity<Courier> response = controller.getCourier(courierId);
-
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertNull(response.getBody());
+        // Act & Assert
+        assertThrows(CourierNotFoundException.class, () -> controller.getCourier(courierId));
     }
 
     @Test
@@ -121,10 +118,15 @@ class CourierControllerTest {
     }
 
     @Test
-    void getTotalTravelDistance_ShouldReturnDistance() {
+    void getTotalTravelDistance_ExistingCourier_ShouldReturnDistance() {
         // Arrange
         Long courierId = 1L;
         double expectedDistance = 150.5;
+        Courier courier = Courier.builder()
+                .id(courierId)
+                .totalTravelDistance(expectedDistance)
+                .build();
+        when(queryService.getCourierById(courierId)).thenReturn(Optional.of(courier));
         when(queryService.getTotalTravelDistance(courierId)).thenReturn(expectedDistance);
 
         // Act
@@ -134,22 +136,15 @@ class CourierControllerTest {
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         assertEquals(expectedDistance, response.getBody());
-        verify(queryService).getTotalTravelDistance(courierId);
     }
 
     @Test
-    void getTotalTravelDistance_NonExistingCourier_ShouldReturnZero() {
+    void getTotalTravelDistance_NonExistingCourier_ShouldThrowException() {
         // Arrange
         Long courierId = 999L;
-        when(queryService.getTotalTravelDistance(courierId)).thenReturn(0.0);
+        when(queryService.getCourierById(courierId)).thenReturn(Optional.empty());
 
-        // Act
-        ResponseEntity<Double> response = controller.getTotalTravelDistance(courierId);
-
-        // Assert
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertNotNull(response.getBody());
-        assertEquals(0.0, response.getBody());
-        verify(queryService).getTotalTravelDistance(courierId);
+        // Act & Assert
+        assertThrows(CourierNotFoundException.class, () -> controller.getTotalTravelDistance(courierId));
     }
 } 

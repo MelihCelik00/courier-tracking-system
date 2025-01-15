@@ -59,7 +59,7 @@ class StoreEntryConsumerTest {
                 .when(commandService).processStoreEntry(event);
 
         // Act & Assert
-        consumer.consume(event); // Should not throw exception
+        consumer.consume(event);
         verify(commandService).processStoreEntry(event);
     }
 } 

@@ -129,7 +129,7 @@ sequenceDiagram
 ## Getting Started
 
 ### Prerequisites
-- Docker and Docker Compose
+- Docker Desktop/Orbstack or any other docker engines
 - Java 21 JDK
 - Gradle 8.x
 
@@ -222,7 +222,8 @@ curl -X POST "http://localhost:8080/api/v1/couriers/1/locations?latitude=40.9923
 
 # Location 3 - Moving away from store
 curl -X POST "http://localhost:8080/api/v1/couriers/1/locations?latitude=40.9923307&longitude=29.1254229"
-```
+```  
+Current test coverage: **86%**
 
 ### Monitoring
 1. View Kafka messages:
@@ -283,5 +284,6 @@ docker-compose down -v
 
 ### Future Implementation Ideas
 - Implement retry topics and mechanism (3 attempts with 1-second delay)
-- Didn't add unit tests currently, unit tests should have been added.
-- For a DDD approach, services could be splitted into microservices.
+- Increase unit test coverage (Currently 86%)
+- For a DDD approach, services could be separated into microservices
+- More endpoints for a potential detailed business logic

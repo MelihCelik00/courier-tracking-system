@@ -1,5 +1,6 @@
 package com.melihcelik.couriertracking.application.query;
 
+import com.melihcelik.couriertracking.domain.exception.CourierNotFoundException;
 import com.melihcelik.couriertracking.domain.model.Courier;
 import com.melihcelik.couriertracking.domain.repository.CourierRepository;
 import com.melihcelik.couriertracking.domain.repository.StoreEntryRepository;
@@ -23,6 +24,6 @@ public class CourierQueryService {
     public double getTotalTravelDistance(Long courierId) {
         return courierRepository.findById(courierId)
                 .map(Courier::getTotalTravelDistance)
-                .orElse(0.0);
+                .orElseThrow(() -> new CourierNotFoundException(courierId));
     }
 } 
