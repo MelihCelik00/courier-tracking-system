@@ -34,24 +34,19 @@ public class CourierLocationCommandService {
     public void processCourierLocation(CourierLocationEvent event) {
         log.debug("Processing courier location event: {}", event);
         
-        // First, ensure courier exists
         Courier courier = courierRepository.findById(event.getCourierId())
                 .orElseGet(() -> createNewCourier(event));
         
-        // Save/update courier first
         updateCourierLocation(courier, event);
-        courier = courierRepository.save(courier);  // Get the managed entity with ID
+        courier = courierRepository.save(courier);
 
-        // Store the final courier ID for use in the transaction callback
         final Long courierId = courier.getId();
         final CourierLocationEvent finalEvent = event;
 
-        // Register a callback to be executed after transaction commit
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
-                // Fetch the courier again to ensure we have the committed data
-                courierRepository.findById(courierId).ifPresent(committedCourier -> 
+                courierRepository.findById(courierId).ifPresent(committedCourier ->
                     checkStoreProximity(committedCourier, finalEvent));
             }
         });
@@ -66,7 +61,7 @@ public class CourierLocationCommandService {
                 .lastLongitude(event.getLongitude())
                 .isActive(true)
                 .build();
-        return courierRepository.save(courier);  // Save immediately to get ID
+        return courierRepository.save(courier);
     }
 
     private void updateCourierLocation(Courier courier, CourierLocationEvent event) {

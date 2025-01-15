@@ -32,21 +32,18 @@ public class StoreEntryCommandService {
         try {
             log.debug("Processing store entry event: {}", event);
             
-            // Validate courier exists
             Courier courier = courierRepository.findById(event.getCourierId())
                     .orElseThrow(() -> {
                         log.error("Courier not found for store entry event - courierId: {}", event.getCourierId());
                         return new IllegalStateException("Courier not found with ID: " + event.getCourierId());
                     });
             
-            // Validate store exists
             Store store = storeRepository.findById(event.getStoreId())
                     .orElseThrow(() -> {
                         log.error("Store not found for store entry event - storeId: {}", event.getStoreId());
                         return new IllegalStateException("Store not found with ID: " + event.getStoreId());
                     });
 
-            // Check cooldown period
             Instant cooldownTime = event.getTimestamp().minus(Duration.ofSeconds(storeEntryCooldown));
             boolean recentEntry = storeEntryRepository
                     .findLatestEntryForCourierAndStore(courier.getId(), store.getId(), cooldownTime)
@@ -58,8 +55,7 @@ public class StoreEntryCommandService {
                 return;
             }
 
-            // Create and save store entry
-            log.info("Creating new store entry - courier: {}, store: {}, timestamp: {}", 
+            log.info("Creating new store entry - courier: {}, store: {}, timestamp: {}",
                     courier.getId(), store.getId(), event.getTimestamp());
 
             StoreEntry entry = StoreEntry.builder()
