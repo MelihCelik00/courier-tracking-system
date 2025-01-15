@@ -19,7 +19,12 @@ public class StoreEntryConsumer {
         containerFactory = "storeEntryKafkaListenerContainerFactory"
     )
     public void consume(StoreEntryEvent event) {
-        log.debug("Received store entry event: {}", event);
-        commandService.processStoreEntry(event);
+        try {
+            log.debug("Received store entry event: {}", event);
+            commandService.processStoreEntry(event);
+        } catch (Exception e) {
+            log.error("Error processing store entry event: {}", event, e);
+            // Don't rethrow the exception to prevent message redelivery
+        }
     }
 } 

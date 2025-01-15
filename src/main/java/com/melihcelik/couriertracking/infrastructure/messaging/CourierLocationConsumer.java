@@ -19,7 +19,12 @@ public class CourierLocationConsumer {
         containerFactory = "courierLocationKafkaListenerContainerFactory"
     )
     public void consume(CourierLocationEvent event) {
-        log.debug("Received courier location event: {}", event);
-        commandService.processCourierLocation(event);
+        try {
+            log.debug("Received courier location event: {}", event);
+            commandService.processCourierLocation(event);
+        } catch (Exception e) {
+            log.error("Error processing courier location event: {}", event, e);
+            // Don't rethrow the exception to prevent message redelivery
+        }
     }
 } 
