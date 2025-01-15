@@ -1,7 +1,7 @@
 package com.melihcelik.couriertracking.domain.util;
 
 public class GeoUtils {
-    private static final double EARTH_RADIUS = 6371000; // Earth's radius in meters
+    private static final double EARTH_RADIUS = 6371.0; // Earth's radius in kilometers
 
     private GeoUtils() {
         // Utility class
@@ -13,7 +13,7 @@ public class GeoUtils {
      * @param lon1 Longitude of first point
      * @param lat2 Latitude of second point
      * @param lon2 Longitude of second point
-     * @return Distance in meters
+     * @return Distance in kilometers
      */
     public static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);
@@ -41,6 +41,6 @@ public class GeoUtils {
      * @return true if point is within radius
      */
     public static boolean isWithinRadius(double lat1, double lon1, double lat2, double lon2, double radius) {
-        return calculateDistance(lat1, lon1, lat2, lon2) <= radius;
+        return calculateDistance(lat1, lon1, lat2, lon2) * 1000 <= radius; // Convert km to meters for comparison
     }
 } 
