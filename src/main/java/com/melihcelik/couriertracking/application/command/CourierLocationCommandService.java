@@ -54,14 +54,13 @@ public class CourierLocationCommandService {
 
     private Courier createNewCourier(CourierLocationEvent event) {
         log.info("Creating new courier with ID: {}", event.getCourierId());
-        Courier courier = Courier.builder()
+        return Courier.builder()
                 .id(event.getCourierId())
                 .totalTravelDistance(0.0)
                 .lastLatitude(event.getLatitude())
                 .lastLongitude(event.getLongitude())
                 .isActive(true)
                 .build();
-        return courierRepository.save(courier);
     }
 
     private void updateCourierLocation(Courier courier, CourierLocationEvent event) {
