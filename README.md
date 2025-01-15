@@ -136,7 +136,7 @@ sequenceDiagram
 ### One-Click Setup
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/courier-tracking-service.git
+git clone https://github.com/MelihCelik00/courier-tracking-service.git
 cd courier-tracking-service
 ```
 
@@ -266,7 +266,6 @@ src/main/java/com/melihcelik/couriertracking/
 - `KafkaConfig`: Kafka configuration and retry policies
 
 ### Error Handling
-- Kafka retry mechanism (3 attempts with 1-second delay)
 - Transaction-safe event publishing
 - Comprehensive error logging
 - Cooldown period for store entries
@@ -282,12 +281,7 @@ docker-compose down
 docker-compose down -v
 ```
 
-## Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## License
-This project is licensed under the MIT License - see the LICENSE file for details. 
+### Future Implementation Ideas
+- Implement retry topics and mechanism (3 attempts with 1-second delay)
+- Didn't add unit tests currently, unit tests should have been added.
+- For a DDD approach, services could be splitted into microservices.
